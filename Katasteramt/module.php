@@ -618,23 +618,17 @@ class Katasteramt extends IPSModule
 
     private function injectLevelsValues(array &$form): void
     {
-        $rows = $this->buildLevelsRows();
-        foreach ($form['elements'] as &$el) {
-            if (($el['name'] ?? '') === 'Levels') {
-                $el['values'] = $rows;
-                break;
-            }
+        $el = &$this->findFormElementByName($form['elements'], 'Levels');
+        if ($el !== null) {
+            $el['values'] = $this->buildLevelsRows();
         }
     }
 
     private function injectStatusLine(array &$form): void
     {
-        $structure = $this->buildStructure();
-        foreach ($form['elements'] as &$el) {
-            if (($el['name'] ?? '') === 'StatusLine') {
-                $el['caption'] = $this->statusLineText($structure);
-                break;
-            }
+        $el = &$this->findFormElementByName($form['elements'], 'StatusLine');
+        if ($el !== null) {
+            $el['caption'] = $this->statusLineText($this->buildStructure());
         }
     }
 
@@ -664,14 +658,16 @@ class Katasteramt extends IPSModule
 
     // Sucht ein Formularelement anhand seines 'name' rekursiv, auch wenn es
     // in einem ExpansionPanel/RowLayout verschachtelt ist. Live-Fund
-    // 09.09.2026: die bisherigen Injektoren (injectLevelsValues/
-    // injectStatusLine) durchsuchen nur die oberste Ebene — funktioniert nur
-    // zufällig, weil deren Felder (noch) nicht in einem Panel liegen.
-    // 'StructurePreview' dagegen liegt im Panel "🔍 Eingelesene Struktur" und
-    // wurde deshalb beim ERSTEN Formular-Öffnen nie befüllt (nur nachträglich
-    // über UpdateFormField() bei einem Button-Klick, der die Verschachtelung
-    // ignoriert). Gibt eine Referenz zurück, damit der Aufrufer das Element
-    // direkt verändern kann; null, wenn nichts gefunden wurde.
+    // 09.09.2026: 'StructurePreview' liegt im Panel "🔍 Eingelesene Struktur"
+    // und wurde deshalb beim ERSTEN Formular-Öffnen nie befüllt (nur
+    // nachträglich über UpdateFormField() bei einem Button-Klick, der die
+    // Verschachtelung ignoriert). Seit 28.09.2026 nutzen alle Injektoren
+    // (injectLevelsValues/injectStatusLine/injectPreview/
+    // injectStandesamtValues) diese Funktion, damit eine spätere
+    // Formular-Umstrukturierung nicht wieder eine nur oberste Ebene
+    // durchsuchende Injektion stillschweigend kaputt macht. Gibt eine
+    // Referenz zurück, damit der Aufrufer das Element direkt verändern kann;
+    // null, wenn nichts gefunden wurde.
     private function &findFormElementByName(array &$elements, string $name): ?array
     {
         foreach ($elements as &$el) {
